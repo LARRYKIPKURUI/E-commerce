@@ -1,4 +1,74 @@
 <?php
+ include("connection.php");
+
+ ob_start(); // Start output buffering
+ session_start();
+ 
+ $username_error = "";
+ $password_error = "";
+ 
+ if ($_SERVER["REQUEST_METHOD"] == "POST")  {
+     $username = mysqli_real_escape_string ($conn,$_POST['username']);
+     $password = $_POST['password'];
+ 
+     // Validate username
+     if (empty($username)) {
+         $username_error = "Username cannot be empty!";
+     } else if (strlen($username) < 5) {
+         $username_error = "Username should have at least 5 characters";
+     }
+ 
+     // Validate password
+     if (empty($password)) {
+         $password_error = "Password cannot be empty!";
+     } else if (strlen($password) < 4) {
+         $password_error = "Password should have more than 4 characters";
+     }
+ 
+     // Use prepared statements to prevent SQL injection
+     $sql = "SELECT username, password FROM users WHERE username = ?";
+     $stmt = mysqli_prepare($conn, $sql);
+ 
+     // Check if the statement preparation was successful
+     if ($stmt) {
+         mysqli_stmt_bind_param($stmt, "s", $username);
+         mysqli_stmt_execute($stmt);
+         $result = mysqli_stmt_get_result($stmt);
+         $user = mysqli_fetch_assoc($result);
+ 
+         // Check if a user with the given username was found
+         if ($user) {
+             // Retrieve the hashed password from the database
+             $hashed_password_from_db = $user["password"];
+ 
+             // Check if the provided password matches the hashed password in the database
+             if (password_verify($password, $hashed_password_from_db)) {
+                 // Passwords match, proceed to set session
+                 $sessionToken = bin2hex(random_bytes(32));
+                 $_SESSION["username"] = $user["username"];
+                
+                 header("Location: home.php");
+                 exit();
+             } else {
+                 // Passwords don't match
+                 $password_error = "Password does not match";
+             }
+         } else {
+             // Username does not exist
+             $username_error = "Username does not exist";
+         }
+ 
+         // Close the statement
+         mysqli_stmt_close($stmt);
+     } else {
+         // Handle the case where the statement preparation failed
+         echo "Error in SQL statement preparation: " . mysqli_error($conn);
+     }
+ 
+     // Close the database connection
+     mysqli_close($conn);
+ } 
+
 // Get the current page filename
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
@@ -10,12 +80,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shoe Hub</title>
-    
     <link rel="stylesheet" href="output.css">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet"> 
-    
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-gray-800 " >
+
 
 <!-- Header goes here -->
 <header class="text-gray-400 bg-gray-900 body-font">
@@ -26,12 +95,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
       <span class="ml-3 text-xl text-lime-400">SHOE_HUB</span>
     </a>
     <nav class="flex flex-wrap items-center justify-center text-base md:ml-auto md:mr-auto">
-    <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'index.php') echo 'active:text-orange-500'; ?>" href="index.php">Home</a>
+    <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'index.php') echo 'active:text-orange-500'; ?>" href="home.php">Home</a>
     <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'shop.php') echo 'active:text-orange-500'; ?>" href="shop.php">Shop</a>
     <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'about.php') echo 'active:text-orange-500'; ?>" href="about.php">About</a>
     <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'contact.php') echo 'active:text-orange-500'; ?>" href="contact.php">Contact</a>
 </nav>
- <a  class="hover:underline hover:text-lime-400 text-lg <?php if ($current_page === 'index.php') echo 'active:text-orange-500'; ?>" href="shopping_cart.php">
+<a  class="hover:underline hover:text-lime-400 text-lg <?php if ($current_page === 'index.php') echo 'active:text-orange-500'; ?>" href="shopping_cart.php">
     <button class="inline-flex items-center px-3 py-1 mt-3 text-base bg-gray-900 border-0 rounded focus:outline-none md:mt-0">Shopping Cart
     <img src="images/cart.png" class="cart" alt="Cart Icon" id="cartIcon">
       
@@ -40,84 +109,38 @@ $current_page = basename($_SERVER['PHP_SELF']);
 </header>
 <!-- Header ends here -->
 
-<section class="bg-gray-600 body-font">
-  <div class="container flex flex-col items-center px-5 py-24 mx-auto md:flex-row">
-    <div class="flex flex-col items-center mb-16 text-center lg:flex-grow md:w-1/2 lg:pr-24 md:pr-16 md:items-start md:text-left md:mb-0">
-      <h1 class="mb-4 text-3xl text-white font-medium text-#fc7303 title-font sm:text-4xl"> With Shoe Hub, you can walk confidently 
-        <br class="hidden text-white lg:inline-block">knowing you're stepping out in the best.
-      </h1>
-      <p class="mb-8 leading-relaxed text-white">Step into style with our extensive collection featuring top names like Nike, Jordan, and many more. Whether you're searching for the perfect pair
-         of sneakers to elevate your streetwear game or sleek heels to make a statement, we've got you covered.</p>
-      <div class="flex justify-center">
-      <a href="login.php">  <button class="inline-flex px-6 py-2 text-lg text-white bg-indigo-500 border-0 rounded focus:outline-none hover:bg-indigo-600">Log in</button></a>
-      <a href="register.php">  <button class="inline-flex px-6 py-2 ml-4 text-lg text-white bg-gray-900 border-0 rounded focus:outline-none hover:bg-gray-700 hover:text-white">Sign Up</button> </a>
-      </div>
+<section class="text-gray-400 bg-gray-800 body-font">
+  <div class="container flex flex-wrap items-center px-5 py-18.5 mx-auto">
+    <div class="pr-0 lg:w-3/5 md:w-1/2 md:pr-16 lg:pr-0">
+      <h1 class="text-3xl font-medium text-white title-font">Welcome to Shoe Hub</h1>
+      <p class="mt-4 leading-relaxed">Your ultimate destination for the latest footwear trends and iconic brands.
+      Welcome to Shoe Hub's login page! We're thrilled to have you here. Before you can step into our world of fabulous footwear, please ensure that you've registered for an account. Without a registered account, you won't be able to access our exclusive collection or enjoy
+       the perks of being part of the Shoe Hub community. If you haven't signed up yet, no worries! Just head over to our sign-up page to create your account and start your shoe journey with us. We can't wait to see you strut your stuff in style!
+      </p>
     </div>
-    <div class="relative w-5/6 overflow-hidden lg:max-w-lg lg:w-full md:w-1/2">
-      <img alt="sneaker"  src="images/iconic.jpg" class="block transition-transform duration-40 transform-gpu hover:translate-y-6" >
+    <div class="flex flex-col w-full p-8 mt-10 bg-opacity-50 rounded-lg gray-800 lg:w-2/5 md:w-1/2 md:ml-auto md:mt-0">
+      <h2 class="mb-3 text-lg font-medium text-white title-font">Sign in</h2>
+      <form action="<?php  echo $_SERVER['PHP_SELF']; ?>" method="post" >
+          <div class="relative mb-1">
+            <label for="username" class="text-sm leading-7 text-gray-400">Username</label>
+            <input type="username" id="username" name="username" class="w-full px-3 py-1 text-base leading-8 text-gray-100 transition-colors duration-200 ease-in-out bg-gray-600 border border-gray-600 rounded outline-none bg-opacity-20 focus:bg-transparent focus:ring-2 focus:ring-indigo-900 focus:border-indigo-500">
+            <p class="error" style="color: red;"><?php echo $username_error; ?></p><br>
+          </div>
+          <div class="relative mb-1">
+            <label for="password" class="text-sm leading-7 text-gray-400">Password</label>
+            <input type="password" id="passowrd" name="password" class="w-full px-3 py-1 text-base leading-8 text-gray-100 transition-colors duration-200 ease-in-out bg-gray-600 border border-gray-600 rounded outline-none bg-opacity-20 focus:bg-transparent focus:ring-2 focus:ring-indigo-900 focus:border-indigo-500">
+            <p class="error" style="color: red;"><?php echo $password_error; ?></p><br>
+          </div>
+          <button class="px-8 py-2 text-lg text-white bg-indigo-500 border-0 rounded focus:outline-none hover:bg-indigo-600">Sign in</button>
+          <p class="mt-3 text-xs">If you do not have an account, <a href="register.php" class="text-indigo-400">Register here</a>.</p>
+      </form>
     </div>
   </div>
 </section>
-    
-  <div class="relative font-[sans-serif] before:absolute before:w-full before:h-full before:inset-0 before:bg-black before:opacity-50 before:z-10">
-        <img src="images/Brand.jpg" alt="Banner Image" class="absolute inset-0 object-cover w-full h-full" />
-        <div class="min-h-[300px] relative z-50 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 class="mb-6 text-2xl font-bold sm:text-4xl">Best Selling Brands</h2>
-          <p class="text-lg text-center text-gray-200">Embark on unforgettable journey of walking get your esteemed shoes today at Shoe_Hub!</p>
-          <a href="shop.php"
-            class="mt-8 bg-transparent text-white text-base font-semibold py-2.5 px-6 border-2 border-white rounded hover:bg-white hover:text-black transition duration-300 ease-in-out">
-            Learn More
-          </a>
-        </div>
-      </div>
-      <div class="bg-gradient-to-r from-purple-600 to-blue-600 font-[sans-serif] p-6">
-            <div class="container flex flex-col items-center justify-center mx-auto">
-                <h2 class="mb-4 text-3xl font-bold text-white">Discover Our New Collection</h2>
-                <p class="mb-6 text-base text-center text-white">Elevate your style with our latest arrivals. Shop now and enjoy exclusive discounts!</p>
-                <a href="shop.php" class="px-6 py-2 text-sm font-semibold text-blue-600 bg-white rounded hover:bg-slate-100">
-                    Shop Now
-                </a>
-            </div>
-        </div>
-      <div class="relative font-[sans-serif] before:absolute before:w-full before:h-full before:inset-0 before:bg-black before:opacity-50 before:z-10">
-        <img src="images/Brand3.jpg" alt="Banner Image" class="absolute inset-0 object-cover w-full h-full" />
-        <div class="min-h-[300px] relative z-50 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 class="mb-6 text-2xl font-bold sm:text-4xl">All time Drip Shoes</h2>
-          <p class="text-lg text-center text-gray-200">Walk confidently courtesy of your drip shoes from Shoe hub!</p>
-          <a href="shop.php"
-            class="mt-8 bg-transparent text-white text-base font-semibold py-2.5 px-6 border-2 border-white rounded hover:bg-white hover:text-black transition duration-300 ease-in-out">
-            Learn More
-          </a>
-        </div>
-      </div>
-      <div class="relative font-[sans-serif] before:absolute before:w-full before:h-full before:inset-0 before:bg-black before:opacity-50 before:z-10">
-        <img src="images/Brand2.jpg" alt="Banner Image" class="absolute inset-0 object-cover w-full h-full" />
-        <div class="min-h-[300px] relative z-50 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 class="mb-6 text-2xl font-bold sm:text-4xl">Top Trending Shoes</h2>
-          <p class="text-lg text-center text-gray-200">Wear the latest shoe brand to keep up with estatic shoe game only in ShoeHub!</p>
-          <a href="shop.php"
-            class="mt-8 bg-transparent text-white text-base font-semibold py-2.5 px-6 border-2 border-white rounded hover:bg-white hover:text-black transition duration-300 ease-in-out">
-            Learn More
-          </a>
-        </div>
-      </div>
 
+</body>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <footer class="bg-gray-900 py-8 px-10 font-[sans-serif]">
+<footer class="bg-gray-900 py-8 px-10 font-[sans-serif]">
       <div class="md:max-w-[50%] mx-auto text-center">
       <a class="flex items-center mb-4 font-medium text-white title-font md:mb-0">
 
@@ -125,8 +148,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
       <span class="ml-3 text-xl text-lime-400">SHOE_HUB</span>
       </a>
         <p class="mt-8 text-sm text-gray-400">"Shoes aren't just accessories; they're the silent storytellers of our journeys,
-           each step a chapter, every scuff a memory, and every shine a reflection of the paths we've tread." <a href="about.php" class="text-sm font-semibold text-blue-500">Read
-            more...</a></p>
+           each step a chapter, every scuff a memory, and every shine a reflection of the paths we've tread." <a href="" class="text-sm font-semibold text-blue-500">Read
+            more on our about us page...</a></p>
         <ul class="mt-6">
           <li class="space-x-4">
             <a href='javascript:void(0)'>
@@ -243,5 +266,5 @@ $current_page = basename($_SERVER['PHP_SELF']);
       </div>
     </footer>
 
-</body>
+
 </html>

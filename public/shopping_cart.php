@@ -1,7 +1,17 @@
 <?php
+// Start or resume the current session
+session_start();
+
+// Check if the session variable 'username' is not set
+if (!isset($_SESSION['username'])) {
+    // Redirect the user to index.php to deny access of page since they have not logged in
+    header("Location: index.php");
+    exit; // Terminate script execution to ensure the redirect takes effect
+}
 
 
-
+// Get the current page filename
+$current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
@@ -22,7 +32,7 @@
       <span class="ml-3 text-xl text-lime-400">SHOE_HUB</span>
     </a>
     <nav class="flex flex-wrap items-center justify-center text-base md:ml-auto md:mr-auto">
-      <a class="mr-5 text-lg hover:text-lime-400" href="index.php" >Home</a>
+      <a class="mr-5 text-lg hover:text-lime-400" href="home.php" >Home</a>
       <a class="mr-5 text-lg hover:text-lime-400" href="shop.php" >Shop</a>
       <a class="mr-5 text-lg hover:text-lime-400" href="about.php" >About</a>
       <a class="mr-5 text-lg hover:text-lime-400" href="contact.php" >Contact </a>

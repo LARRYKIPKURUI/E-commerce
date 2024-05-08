@@ -1,9 +1,18 @@
 <?php
+// Start or resume the current session
+session_start();
+
+// Check if the session variable 'username' is not set
+if (!isset($_SESSION['username'])) {
+    // Redirect the user to index.php to deny access of page since they have not logged in
+    header("Location: index.php");
+    exit; // Terminate script execution to ensure the redirect takes effect
+}
+
+
 // Get the current page filename
 $current_page = basename($_SERVER['PHP_SELF']);
-
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -26,7 +35,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
       <span class="ml-3 text-xl text-lime-400">SHOE_HUB</span>
     </a>
     <nav class="flex flex-wrap items-center justify-center text-base md:ml-auto md:mr-auto">
-    <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'index.php') echo 'active:text-orange-500'; ?>" href="index.php">Home</a>
+    <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'index.php') echo 'active:text-orange-500'; ?>" href="home.php">Home</a>
     <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'shop.php') echo 'active:text-orange-500'; ?>" href="shop.php">Shop</a>
     <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'about.php') echo 'active:text-orange-500'; ?>" href="about.php">About</a>
     <a class="mr-5 text-lg hover:underline hover:text-lime-400 <?php if ($current_page === 'contact.php') echo 'active:text-orange-500'; ?>" href="contact.php">Contact</a>
